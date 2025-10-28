@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Image Compressor</title>
+<style>
+  body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: #0b0f15;
+    color: #e6edf3;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 10px;
+  }
+  h1 {
+    color: #00ffc6;
+    letter-spacing: 0.5px;
+    margin-bottom: 20px;
+  }
+  .container {
+    background: #111723;
+    padding: 25px;
+    border-radius: 14px;
+    box-shadow: 0 0 25px #00ffc640;
+    max-width: 950px;
+    width: 100%;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  input, button {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    background: #1b2330;
+    color: #e6edf3;
+  }
+  input::placeholder { color: #888; }
+  input[type="number"] { width: 45%; }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+  }
+  .lock-btn {
+    background: none;
+    border: 2px solid #00ffc6;
+    color: #00ffc6;
+    font-size: 22px;
+    width: 45px;
+    height: 45px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .lock-btn.locked {
+    background: #00ffc6;
+    color: #000;
+  }
+  button.action {
+    background: #00ffc6;
+    color: #000;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button.action:hover { background: #00e6b2; }
+  #downloadLink { text-decoration: none; width: 100%; }
+  .preview-section {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+  }
+  .preview-box {
+    background: #141b29;
+    flex: 1;
+    min-width: 280px;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+  }
+  .preview-box h3 {
+    color: #00ffc6;
+    margin-bottom: 10px;
+  }
+  img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  .info {
+    margin-top: 5px;
+    color: #ccc;
+    font-size: 14px;
+  }
+  hr {
+    border: none;
+    border-top: 1px solid #00ffc622;
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+<h1>🖼️ Smart Image Compressor v2</h1>
+<div class="container">
+  <div class="controls">
+    <input type="file" id="upload" accept="image/*">
+
+    <div class="row">
+      <input type="number" id="customWidth" placeholder="Width (px)">
+      <input type="number" id="customHeight" placeholder="Height (px)">
+      <button id="lockBtn" class="lock-btn locked" title="Lock Aspect Ratio">🔒</button>
+    </div>
+
+    <input type="number" id="targetSize" placeholder="Target size (KB)" min="10" max="500">
+    <button id="resizeBtn" class="action">Compress Image</button>
+  </div>
+
+  <hr>
+
+  <div class="preview-section">
+    <div id="preview" class="preview-box">
+      <h3>Original Image</h3>
+      <img id="originalImg" src="" alt="">
+      <div class="info" id="originalSize"></div>
+    </div>
+
+    <div id="result" class="preview-box">
+      <h3>Compressed Image</h3>
+      <img id="resizedImg" src="" alt="">
+      <div class="info" id="compressedSize"></div>
+      <a id="downloadLink" href="#" download="compressed-image.jpg" style="display:none;">
+        <button class="action">Download Image</button>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+const upload = document.getElementById('upload');
+const resizeBtn = document.getElementById('resizeBtn');
+const originalImg = document.getElementById('originalImg');
+const resizedImg = document.getElementById('resizedImg');
+const downloadLink = document.getElementById('downloadLink');
+const originalSize = document.getElementById('originalSize');
+const compressedSize = document.getElementById('compressedSize');
+const lockBtn = document.getElementById('lockBtn');
+const customWidth = document.getElementById('customWidth');
+const customHeight = document.getElementById('customHeight');
+
+let uploadedImage = null;
+let originalFile = null;
+let aspectRatio = 1;
+let isLocked = true;
+
+// Preview uploaded image
+upload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  originalFile = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    uploadedImage = reader.result;
+    const img = new Image();
+    img.onload = () => {
+      aspectRatio = img.width / img.height;
+      customWidth.value = img.width;
+      customHeight.value = img.height;
+    };
+    img.src = uploadedImage;
+    originalImg.src = reader.result;
+    originalSize.textContent = `Original size: ${(file.size / 1024).toFixed(2)} KB`;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Lock / unlock aspect ratio
+lockBtn.addEventListener('click', () => {
+  isLocked = !isLocked;
+  lockBtn.classList.toggle('locked', isLocked);
+  lockBtn.textContent = isLocked ? '🔒' : '🔓';
+});
+
+// Auto maintain aspect ratio
+customWidth.addEventListener('input', () => {
+  if (isLocked && aspectRatio && customWidth.value) {
+    customHeight.value = Math.round(customWidth.value / aspectRatio);
+  }
+});
+customHeight.addEventListener('input', () => {
+  if (isLocked && aspectRatio && customHeight.value) {
+    customWidth.value = Math.round(customHeight.value * aspectRatio);
+  }
+});
+
+// Resize & compress image
+resizeBtn.addEventListener('click', () => {
+  if (!uploadedImage) {
+    alert("Please upload an image first!");
+    return;
+  }
+
+  const width = parseInt(customWidth.value);
+  const height = parseInt(customHeight.value);
+  const targetKB = parseInt(document.getElementById('targetSize').value);
+
+  if (!width || !height || !targetKB) {
+    alert("Please enter width, height, and target size (KB).");
+    return;
+  }
+
+  const img = new Image();
+  img.src = uploadedImage;
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+
+    let quality = 0.92;
+    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+    let fileSizeKB = Math.round((dataURLtoBlob(dataUrl).size / 1024));
+
+    // Compress until reaching target
+    while (fileSizeKB > targetKB && quality > 0.2) {
+      quality -= 0.05;
+      dataUrl = canvas.toDataURL('image/jpeg', quality);
+      fileSizeKB = Math.round((dataURLtoBlob(dataUrl).size / 1024));
+    }
+
+    resizedImg.src = dataUrl;
+    compressedSize.textContent = `Compressed size: ${fileSizeKB} KB (quality: ${(quality*100).toFixed(0)}%)`;
+    downloadLink.href = dataUrl;
+    downloadLink.style.display = 'block';
+  };
+});
+
+// Convert base64 → Blob (for size calculation)
+function dataURLtoBlob(dataurl) {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+  return new Blob([u8arr], {type:mime});
+}
+</script>
+</body>
+</html>
